@@ -1,0 +1,27 @@
+name: Setup App SDK
+description: Downloads, extracts, and initializes App SDK
+inputs:
+  s3-key:
+    description: S3 object key
+    required: true
+  s3-bucket:
+    description: S3 object bucket
+    required: true
+  s3-region:
+    description: S3 service region
+    default: ""
+  s3-endpoint:
+    description: S3 service endpoint
+    default: ""
+  s3-access-key-id:
+    description: S3 access key ID
+    default: ""
+  s3-secret-access-key:
+    description: S3 secret access key
+    default: ""
+  s3-force-path-style:
+    description: S3 force path style
+    default: false
+runs:
+  using: node24
+  main: dist/index.js
