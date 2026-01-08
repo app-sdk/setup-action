@@ -67879,11 +67879,23 @@ try {
   const workspacePath = process.env.GITHUB_WORKSPACE;
   await (0,node_stream_promises__WEBPACK_IMPORTED_MODULE_0__.pipeline)(s3Response.Body, (0,unzipper__WEBPACK_IMPORTED_MODULE_2__.Extract)({ path: workspacePath }));
 
-  // Detect package manager and Node version after extraction
-  const packageManager = await (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath);
+  // Detect Node.js version and package manager after extraction
   const nodeVersion = await (0,_detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__/* .detectNodeVersion */ .W)(workspacePath);
+  const packageManager = await (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath);
+
+  // Define package manager commands
+  const PACKAGE_MANAGER_COMMANDS = {
+    npm: { install: "npm ci", exec: "npx" },
+    yarn: { install: "yarn install", exec: "yarn exec" },
+    pnpm: { install: "pnpm install", exec: "pnpm exec" },
+    bun: { install: "bun install", exec: "bunx" },
+  };
+  const commands = packageManager.name
+    ? PACKAGE_MANAGER_COMMANDS[packageManager.name]
+    : null;
 
   // Set outputs
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("node-version", nodeVersion || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("package-manager", packageManager.name || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
     "pnpm-version",
@@ -67901,7 +67913,8 @@ try {
     "bun-version",
     packageManager.name === "bun" ? packageManager.version || "" : "",
   );
-  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("node-version", nodeVersion || "");
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("install-command", commands?.install || "");
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("exec-command", commands?.exec || "");
 } catch (error) {
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setFailed)(error);
 }

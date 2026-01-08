@@ -23,6 +23,8 @@ inputs:
     description: S3 force path style
     default: false
 outputs:
+  node-version:
+    description: Detected Node.js version
   package-manager:
     description: Detected package manager (npm, yarn, pnpm, or bun)
   npm-version:
@@ -33,8 +35,10 @@ outputs:
     description: Detected pnpm version (if pnpm is the package manager)
   bun-version:
     description: Detected bun version (if bun is the package manager)
-  node-version:
-    description: Detected Node.js version
+  install-command:
+    description: Command to install dependencies (e.g., npm ci, yarn install)
+  exec-command:
+    description: Command to execute package binaries (e.g., npx, yarn exec)
 runs:
   using: node24
   main: dist/index.js

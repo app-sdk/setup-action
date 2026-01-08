@@ -28,11 +28,23 @@ try {
   const workspacePath = process.env.GITHUB_WORKSPACE;
   await pipeline(s3Response.Body, Extract({ path: workspacePath }));
 
-  // Detect package manager and Node version after extraction
-  const packageManager = await detectPackageManager(workspacePath);
+  // Detect Node.js version and package manager after extraction
   const nodeVersion = await detectNodeVersion(workspacePath);
+  const packageManager = await detectPackageManager(workspacePath);
+
+  // Define package manager commands
+  const PACKAGE_MANAGER_COMMANDS = {
+    npm: { install: "npm ci", exec: "npx" },
+    yarn: { install: "yarn install", exec: "yarn exec" },
+    pnpm: { install: "pnpm install", exec: "pnpm exec" },
+    bun: { install: "bun install", exec: "bunx" },
+  };
+  const commands = packageManager.name
+    ? PACKAGE_MANAGER_COMMANDS[packageManager.name]
+    : null;
 
   // Set outputs
+  setOutput("node-version", nodeVersion || "");
   setOutput("package-manager", packageManager.name || "");
   setOutput(
     "pnpm-version",
@@ -50,7 +62,8 @@ try {
     "bun-version",
     packageManager.name === "bun" ? packageManager.version || "" : "",
   );
-  setOutput("node-version", nodeVersion || "");
+  setOutput("install-command", commands?.install || "");
+  setOutput("exec-command", commands?.exec || "");
 } catch (error) {
   setFailed(error);
 }
