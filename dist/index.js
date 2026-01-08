@@ -67600,21 +67600,268 @@ module.exports = parseParams
 
 /***/ }),
 
+/***/ 1178:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   W: () => (/* binding */ detectNodeVersion)
+/* harmony export */ });
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1455);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+
+
+
+/**
+ * Reads a simple version file (.nvmrc, .node-version)
+ * Handles various formats: "v20.10.0", "20.10.0", "20", "lts/*"
+ * @param {string} filePath
+ * @returns {Promise<string | null>}
+ */
+async function readVersionFile(filePath) {
+  try {
+    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(filePath, "utf-8");
+    const trimmed = content.trim();
+
+    // Return null if file is empty or only whitespace
+    if (!trimmed) {
+      return null;
+    }
+
+    // Handle comments (lines starting with #)
+    const lines = trimmed.split("\n");
+    for (const line of lines) {
+      const stripped = line.trim();
+      if (stripped && !stripped.startsWith("#")) {
+        return stripped;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parses .tool-versions file (asdf format)
+ * Format: "nodejs 20.10.0" or "nodejs 20.10.0 18.0.0" (first is primary)
+ * @param {string} projectPath
+ * @returns {Promise<string | null>}
+ */
+async function readToolVersions(projectPath) {
+  try {
+    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(
+      (0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".tool-versions"),
+      "utf-8",
+    );
+
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Skip empty lines and comments
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+
+      // Parse "tool version [version2 ...]" format
+      const parts = trimmed.split(/\s+/);
+      if (parts[0] === "nodejs" && parts[1]) {
+        // Return the first (primary) version
+        return parts[1];
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads and parses package.json
+ * @param {string} projectPath
+ * @returns {Promise<object | null>}
+ */
+async function readPackageJson(projectPath) {
+  try {
+    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, "package.json"), "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Detects Node.js version from various sources
+ * @param {string} projectPath - Path to the project
+ * @returns {Promise<string | null>}
+ */
+async function detectNodeVersion(projectPath) {
+  // Strategy 1: .node-version file
+  const nodeVersionFile = await readVersionFile(
+    (0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".node-version"),
+  );
+  if (nodeVersionFile) {
+    return nodeVersionFile;
+  }
+
+  // Strategy 2: .nvmrc file
+  const nvmrc = await readVersionFile((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".nvmrc"));
+  if (nvmrc) {
+    return nvmrc;
+  }
+
+  // Strategy 3: .tool-versions (asdf format)
+  const toolVersions = await readToolVersions(projectPath);
+  if (toolVersions) {
+    return toolVersions;
+  }
+
+  // Strategy 4 & 5: package.json (volta.node then engines.node)
+  const pkgJson = await readPackageJson(projectPath);
+  if (pkgJson) {
+    // Volta takes precedence (exact version)
+    if (pkgJson.volta?.node) {
+      return pkgJson.volta.node;
+    }
+
+    // engines.node as fallback (may be a range)
+    if (pkgJson.engines?.node) {
+      return pkgJson.engines.node;
+    }
+  }
+
+  return null;
+}
+
+
+/***/ }),
+
+/***/ 1621:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   L: () => (/* binding */ detectPackageManager)
+/* harmony export */ });
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1455);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+
+
+
+const LOCK_FILES = {
+  "pnpm-lock.yaml": "pnpm",
+  "yarn.lock": "yarn",
+  "package-lock.json": "npm",
+  "npm-shrinkwrap.json": "npm",
+  "bun.lockb": "bun",
+  "bun.lock": "bun",
+};
+
+/**
+ * Parses packageManager field (e.g., "pnpm@10.27.0" or "pnpm@10.27.0+sha256.xxx")
+ * @param {string} value
+ * @returns {{ name: string, version: string | null }}
+ */
+function parsePackageManagerField(value) {
+  // Remove corepack hash suffix if present (e.g., "+sha256.xxx")
+  const withoutHash = value.split("+")[0];
+
+  // Handle "^pnpm@10.27.0" format (remove leading ^)
+  const normalized = withoutHash.replace(/^\^/, "");
+
+  const atIndex = normalized.indexOf("@");
+  if (atIndex === -1) {
+    return { name: normalized, version: null };
+  }
+
+  return {
+    name: normalized.substring(0, atIndex),
+    version: normalized.substring(atIndex + 1),
+  };
+}
+
+/**
+ * Reads and parses package.json
+ * @param {string} projectPath
+ * @returns {Promise<object | null>}
+ */
+async function readPackageJson(projectPath) {
+  try {
+    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, "package.json"), "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Gets package manager version from packageManager field if names match
+ * @param {string} projectPath
+ * @param {string} pmName
+ * @returns {Promise<string | null>}
+ */
+async function getPackageManagerVersion(projectPath, pmName) {
+  const pkgJson = await readPackageJson(projectPath);
+  if (pkgJson?.packageManager) {
+    const parsed = parsePackageManagerField(pkgJson.packageManager);
+    if (parsed.name === pmName) {
+      return parsed.version;
+    }
+  }
+  return null;
+}
+
+/**
+ * Detects package manager from lock files and package.json
+ * @param {string} projectPath - Path to the project
+ * @returns {Promise<{ name: string | null, version: string | null }>}
+ */
+async function detectPackageManager(projectPath) {
+  // Strategy 1: Check lock files (highest priority)
+  for (const [lockFile, pmName] of Object.entries(LOCK_FILES)) {
+    try {
+      await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.access)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, lockFile));
+      // Lock file exists - use this package manager
+      const version = await getPackageManagerVersion(projectPath, pmName);
+      return { name: pmName, version };
+    } catch {
+      // Lock file doesn't exist, continue
+    }
+  }
+
+  // Strategy 2: Check packageManager field in package.json
+  const pkgJson = await readPackageJson(projectPath);
+  if (pkgJson?.packageManager) {
+    return parsePackageManagerField(pkgJson.packageManager);
+  }
+
+  return { name: null, version: null };
+}
+
+
+/***/ }),
+
 /***/ 5845:
 /***/ ((__webpack_module__, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
 
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var node_stream_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6466);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1635);
-/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1115);
+/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(1115);
 /* harmony import */ var unzipper__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(2555);
+/* harmony import */ var _detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1621);
+/* harmony import */ var _detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(1178);
+
+
 
 
 
 
 
 try {
-  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_3__.S3Client({
+  // Download and extract the project from S3
+  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__.S3Client({
     credentials: {
       accessKeyId: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-access-key-id") || undefined,
       secretAccessKey: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-secret-access-key") || undefined,
@@ -67624,15 +67871,37 @@ try {
     forcePathStyle: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getBooleanInput)("s3-force-path-style") || false,
   });
   const s3Response = await s3Client.send(
-    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_3__.GetObjectCommand({
+    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__.GetObjectCommand({
       Bucket: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-bucket", { required: true }),
       Key: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-key", { required: true }),
     }),
   );
-  await (0,node_stream_promises__WEBPACK_IMPORTED_MODULE_0__.pipeline)(
-    s3Response.Body,
-    (0,unzipper__WEBPACK_IMPORTED_MODULE_2__.Extract)({ path: process.env.GITHUB_WORKSPACE }),
+  const workspacePath = process.env.GITHUB_WORKSPACE;
+  await (0,node_stream_promises__WEBPACK_IMPORTED_MODULE_0__.pipeline)(s3Response.Body, (0,unzipper__WEBPACK_IMPORTED_MODULE_2__.Extract)({ path: workspacePath }));
+
+  // Detect package manager and Node version after extraction
+  const packageManager = await (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath);
+  const nodeVersion = await (0,_detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__/* .detectNodeVersion */ .W)(workspacePath);
+
+  // Set outputs
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("package-manager", packageManager.name || "");
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
+    "pnpm-version",
+    packageManager.name === "pnpm" ? packageManager.version || "" : "",
   );
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
+    "npm-version",
+    packageManager.name === "npm" ? packageManager.version || "" : "",
+  );
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
+    "yarn-version",
+    packageManager.name === "yarn" ? packageManager.version || "" : "",
+  );
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
+    "bun-version",
+    packageManager.name === "bun" ? packageManager.version || "" : "",
+  );
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("node-version", nodeVersion || "");
 } catch (error) {
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setFailed)(error);
 }

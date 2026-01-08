@@ -22,6 +22,19 @@ inputs:
   s3-force-path-style:
     description: S3 force path style
     default: false
+outputs:
+  package-manager:
+    description: Detected package manager (npm, yarn, pnpm, or bun)
+  npm-version:
+    description: Detected npm version (if npm is the package manager)
+  yarn-version:
+    description: Detected yarn version (if yarn is the package manager)
+  pnpm-version:
+    description: Detected pnpm version (if pnpm is the package manager)
+  bun-version:
+    description: Detected bun version (if bun is the package manager)
+  node-version:
+    description: Detected Node.js version
 runs:
   using: node24
   main: dist/index.js
