@@ -23,6 +23,8 @@ inputs:
     description: S3 force path style
     default: false
 outputs:
+  app-name:
+    description: Detected app name
   app-version:
     description: Detected app version
   node-version:

@@ -5,7 +5,6 @@ import { readJsonFile, writeJsonFile } from "./utils.js";
 
 const BUNDLE_CONFIG = {
   active: true,
-  createUpdaterArtifacts: true,
   targets: ["app", "dmg", "nsis"],
   windows: {
     signCommand:
@@ -26,6 +25,7 @@ export async function updateTauriConfig(workspacePath) {
     configJson.bundle = {
       ...configJson.bundle,
       ...BUNDLE_CONFIG,
+      createUpdaterArtifacts: !!configJson.plugins?.updater,
       windows: {
         ...configJson.bundle?.windows,
         ...BUNDLE_CONFIG.windows,

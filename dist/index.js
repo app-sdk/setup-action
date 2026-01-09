@@ -67611,6 +67611,44 @@ const TAURI_CONFIG_PATH = "src-tauri/tauri.conf.json";
 
 /***/ }),
 
+/***/ 3294:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   _: () => (/* binding */ detectAppName)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1244);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6432);
+
+
+
+
+/**
+ * Detects app name from Tauri config or package.json
+ * Priority: tauri.conf.json productName > package.json name
+ * @param {string} projectPath - Path to the project
+ * @returns {Promise<string | null>}
+ */
+async function detectAppName(projectPath) {
+  // Strategy 1: Tauri config productName
+  const tauriConfig = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readJsonFile */ .JE)((0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, _constants_js__WEBPACK_IMPORTED_MODULE_2__/* .TAURI_CONFIG_PATH */ .D));
+  if (tauriConfig?.productName) {
+    return tauriConfig.productName;
+  }
+
+  // Strategy 2: package.json name
+  const pkgJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readPackageJson */ .jJ)(projectPath);
+  if (pkgJson?.name) {
+    return pkgJson.name;
+  }
+
+  return null;
+}
+
+
+/***/ }),
+
 /***/ 2229:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -67848,12 +67886,14 @@ async function detectPackageManager(projectPath) {
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var node_stream_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6466);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1635);
-/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(1115);
+/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(1115);
 /* harmony import */ var unzipper__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(2555);
 /* harmony import */ var _detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1621);
 /* harmony import */ var _detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(1178);
 /* harmony import */ var _update_tauri_config_js__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(7161);
-/* harmony import */ var _detect_app_version_js__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(2229);
+/* harmony import */ var _detect_app_name_js__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(3294);
+/* harmony import */ var _detect_app_version_js__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(2229);
+
 
 
 
@@ -67865,7 +67905,7 @@ __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependen
 
 try {
   // Download and extract the project from S3
-  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__.S3Client({
+  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_8__.S3Client({
     credentials: {
       accessKeyId: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-access-key-id") || undefined,
       secretAccessKey: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-secret-access-key") || undefined,
@@ -67875,7 +67915,7 @@ try {
     forcePathStyle: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getBooleanInput)("s3-force-path-style") || false,
   });
   const s3Response = await s3Client.send(
-    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__.GetObjectCommand({
+    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_8__.GetObjectCommand({
       Bucket: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-bucket", { required: true }),
       Key: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-key", { required: true }),
     }),
@@ -67886,10 +67926,13 @@ try {
   // Update Tauri config if present
   await (0,_update_tauri_config_js__WEBPACK_IMPORTED_MODULE_5__/* .updateTauriConfig */ .X)(workspacePath);
 
-  // Detect Node.js version, package manager, and app version after extraction
-  const appVersion = await (0,_detect_app_version_js__WEBPACK_IMPORTED_MODULE_6__/* .detectAppVersion */ .N)(workspacePath);
-  const nodeVersion = await (0,_detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__/* .detectNodeVersion */ .W)(workspacePath);
-  const packageManager = await (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath);
+  // Detect Node.js version, package manager, and app details
+  const [appName, appVersion, nodeVersion, packageManager] = await Promise.all([
+    (0,_detect_app_name_js__WEBPACK_IMPORTED_MODULE_6__/* .detectAppName */ ._)(workspacePath),
+    (0,_detect_app_version_js__WEBPACK_IMPORTED_MODULE_7__/* .detectAppVersion */ .N)(workspacePath),
+    (0,_detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__/* .detectNodeVersion */ .W)(workspacePath),
+    (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath),
+  ]);
 
   // Define package manager commands
   const PACKAGE_MANAGER_COMMANDS = {
@@ -67903,6 +67946,7 @@ try {
     : null;
 
   // Set outputs
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("app-name", appName || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("app-version", appVersion || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("node-version", nodeVersion || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("package-manager", packageManager.name || "");
@@ -67950,7 +67994,6 @@ __webpack_async_result__();
 
 const BUNDLE_CONFIG = {
   active: true,
-  createUpdaterArtifacts: true,
   targets: ["app", "dmg", "nsis"],
   windows: {
     signCommand:
@@ -67971,6 +68014,7 @@ async function updateTauriConfig(workspacePath) {
     configJson.bundle = {
       ...configJson.bundle,
       ...BUNDLE_CONFIG,
+      createUpdaterArtifacts: !!configJson.plugins?.updater,
       windows: {
         ...configJson.bundle?.windows,
         ...BUNDLE_CONFIG.windows,

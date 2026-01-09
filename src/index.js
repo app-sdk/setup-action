@@ -8,6 +8,7 @@ import { Extract } from "unzipper";
 import { detectPackageManager } from "./detect-package-manager.js";
 import { detectNodeVersion } from "./detect-node-version.js";
 import { updateTauriConfig } from "./update-tauri-config.js";
+import { detectAppName } from "./detect-app-name.js";
 import { detectAppVersion } from "./detect-app-version.js";
 
 try {
@@ -33,10 +34,13 @@ try {
   // Update Tauri config if present
   await updateTauriConfig(workspacePath);
 
-  // Detect Node.js version, package manager, and app version after extraction
-  const appVersion = await detectAppVersion(workspacePath);
-  const nodeVersion = await detectNodeVersion(workspacePath);
-  const packageManager = await detectPackageManager(workspacePath);
+  // Detect Node.js version, package manager, and app details
+  const [appName, appVersion, nodeVersion, packageManager] = await Promise.all([
+    detectAppName(workspacePath),
+    detectAppVersion(workspacePath),
+    detectNodeVersion(workspacePath),
+    detectPackageManager(workspacePath),
+  ]);
 
   // Define package manager commands
   const PACKAGE_MANAGER_COMMANDS = {
@@ -50,6 +54,7 @@ try {
     : null;
 
   // Set outputs
+  setOutput("app-name", appName || "");
   setOutput("app-version", appVersion || "");
   setOutput("node-version", nodeVersion || "");
   setOutput("package-manager", packageManager.name || "");
