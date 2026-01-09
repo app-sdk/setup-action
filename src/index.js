@@ -7,6 +7,8 @@ import {
 import { Extract } from "unzipper";
 import { detectPackageManager } from "./detect-package-manager.js";
 import { detectNodeVersion } from "./detect-node-version.js";
+import { updateTauriConfig } from "./update-tauri-config.js";
+import { detectAppVersion } from "./detect-app-version.js";
 
 try {
   // Download and extract the project from S3
@@ -28,7 +30,11 @@ try {
   const workspacePath = process.env.GITHUB_WORKSPACE;
   await pipeline(s3Response.Body, Extract({ path: workspacePath }));
 
-  // Detect Node.js version and package manager after extraction
+  // Update Tauri config if present
+  await updateTauriConfig(workspacePath);
+
+  // Detect Node.js version, package manager, and app version after extraction
+  const appVersion = await detectAppVersion(workspacePath);
   const nodeVersion = await detectNodeVersion(workspacePath);
   const packageManager = await detectPackageManager(workspacePath);
 
@@ -44,6 +50,7 @@ try {
     : null;
 
   // Set outputs
+  setOutput("app-version", appVersion || "");
   setOutput("node-version", nodeVersion || "");
   setOutput("package-manager", packageManager.name || "");
   setOutput(

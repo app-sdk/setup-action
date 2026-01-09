@@ -67600,14 +67600,63 @@ module.exports = parseParams
 
 /***/ }),
 
+/***/ 1244:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   D: () => (/* binding */ TAURI_CONFIG_PATH)
+/* harmony export */ });
+const TAURI_CONFIG_PATH = "src-tauri/tauri.conf.json";
+
+
+/***/ }),
+
+/***/ 2229:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   N: () => (/* binding */ detectAppVersion)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1244);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6432);
+
+
+
+
+/**
+ * Detects app version from Tauri config or package.json
+ * Priority: tauri.conf.json version > package.json version
+ * @param {string} projectPath - Path to the project
+ * @returns {Promise<string | null>}
+ */
+async function detectAppVersion(projectPath) {
+  // Strategy 1: Tauri config version
+  const tauriConfig = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readJsonFile */ .JE)((0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, _constants_js__WEBPACK_IMPORTED_MODULE_2__/* .TAURI_CONFIG_PATH */ .D));
+  if (tauriConfig?.version) {
+    return tauriConfig.version;
+  }
+
+  // Strategy 2: package.json version
+  const pkgJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readPackageJson */ .jJ)(projectPath);
+  if (pkgJson?.version) {
+    return pkgJson.version;
+  }
+
+  return null;
+}
+
+
+/***/ }),
+
 /***/ 1178:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   W: () => (/* binding */ detectNodeVersion)
 /* harmony export */ });
-/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1455);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6432);
 
 
 
@@ -67618,28 +67667,21 @@ module.exports = parseParams
  * @returns {Promise<string | null>}
  */
 async function readVersionFile(filePath) {
-  try {
-    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(filePath, "utf-8");
-    const trimmed = content.trim();
+  const content = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readTextFile */ .Gu)(filePath);
+  if (!content) return null;
 
-    // Return null if file is empty or only whitespace
-    if (!trimmed) {
-      return null;
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+
+  // Handle comments (lines starting with #)
+  for (const line of trimmed.split("\n")) {
+    const stripped = line.trim();
+    if (stripped && !stripped.startsWith("#")) {
+      return stripped;
     }
-
-    // Handle comments (lines starting with #)
-    const lines = trimmed.split("\n");
-    for (const line of lines) {
-      const stripped = line.trim();
-      if (stripped && !stripped.startsWith("#")) {
-        return stripped;
-      }
-    }
-
-    return null;
-  } catch {
-    return null;
   }
+
+  return null;
 }
 
 /**
@@ -67649,47 +67691,23 @@ async function readVersionFile(filePath) {
  * @returns {Promise<string | null>}
  */
 async function readToolVersions(projectPath) {
-  try {
-    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(
-      (0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".tool-versions"),
-      "utf-8",
-    );
+  const content = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readTextFile */ .Gu)((0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, ".tool-versions"));
+  if (!content) return null;
 
-    const lines = content.split("\n");
-    for (const line of lines) {
-      const trimmed = line.trim();
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
 
-      // Skip empty lines and comments
-      if (!trimmed || trimmed.startsWith("#")) {
-        continue;
-      }
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
-      // Parse "tool version [version2 ...]" format
-      const parts = trimmed.split(/\s+/);
-      if (parts[0] === "nodejs" && parts[1]) {
-        // Return the first (primary) version
-        return parts[1];
-      }
+    // Parse "tool version [version2 ...]" format
+    const parts = trimmed.split(/\s+/);
+    if (parts[0] === "nodejs" && parts[1]) {
+      return parts[1];
     }
-
-    return null;
-  } catch {
-    return null;
   }
-}
 
-/**
- * Reads and parses package.json
- * @param {string} projectPath
- * @returns {Promise<object | null>}
- */
-async function readPackageJson(projectPath) {
-  try {
-    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, "package.json"), "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 /**
@@ -67700,14 +67718,14 @@ async function readPackageJson(projectPath) {
 async function detectNodeVersion(projectPath) {
   // Strategy 1: .node-version file
   const nodeVersionFile = await readVersionFile(
-    (0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".node-version"),
+    (0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, ".node-version"),
   );
   if (nodeVersionFile) {
     return nodeVersionFile;
   }
 
   // Strategy 2: .nvmrc file
-  const nvmrc = await readVersionFile((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, ".nvmrc"));
+  const nvmrc = await readVersionFile((0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, ".nvmrc"));
   if (nvmrc) {
     return nvmrc;
   }
@@ -67719,7 +67737,7 @@ async function detectNodeVersion(projectPath) {
   }
 
   // Strategy 4 & 5: package.json (volta.node then engines.node)
-  const pkgJson = await readPackageJson(projectPath);
+  const pkgJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readPackageJson */ .jJ)(projectPath);
   if (pkgJson) {
     // Volta takes precedence (exact version)
     if (pkgJson.volta?.node) {
@@ -67744,8 +67762,8 @@ async function detectNodeVersion(projectPath) {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   L: () => (/* binding */ detectPackageManager)
 /* harmony export */ });
-/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1455);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6432);
 
 
 
@@ -67782,27 +67800,13 @@ function parsePackageManagerField(value) {
 }
 
 /**
- * Reads and parses package.json
- * @param {string} projectPath
- * @returns {Promise<object | null>}
- */
-async function readPackageJson(projectPath) {
-  try {
-    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, "package.json"), "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Gets package manager version from packageManager field if names match
  * @param {string} projectPath
  * @param {string} pmName
  * @returns {Promise<string | null>}
  */
 async function getPackageManagerVersion(projectPath, pmName) {
-  const pkgJson = await readPackageJson(projectPath);
+  const pkgJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readPackageJson */ .jJ)(projectPath);
   if (pkgJson?.packageManager) {
     const parsed = parsePackageManagerField(pkgJson.packageManager);
     if (parsed.name === pmName) {
@@ -67820,18 +67824,14 @@ async function getPackageManagerVersion(projectPath, pmName) {
 async function detectPackageManager(projectPath) {
   // Strategy 1: Check lock files (highest priority)
   for (const [lockFile, pmName] of Object.entries(LOCK_FILES)) {
-    try {
-      await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.access)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, lockFile));
-      // Lock file exists - use this package manager
+    if (await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .fileExists */ .hR)((0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(projectPath, lockFile))) {
       const version = await getPackageManagerVersion(projectPath, pmName);
       return { name: pmName, version };
-    } catch {
-      // Lock file doesn't exist, continue
     }
   }
 
   // Strategy 2: Check packageManager field in package.json
-  const pkgJson = await readPackageJson(projectPath);
+  const pkgJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__/* .readPackageJson */ .jJ)(projectPath);
   if (pkgJson?.packageManager) {
     return parsePackageManagerField(pkgJson.packageManager);
   }
@@ -67848,10 +67848,14 @@ async function detectPackageManager(projectPath) {
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var node_stream_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6466);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1635);
-/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(1115);
+/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(1115);
 /* harmony import */ var unzipper__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(2555);
 /* harmony import */ var _detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1621);
 /* harmony import */ var _detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(1178);
+/* harmony import */ var _update_tauri_config_js__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(7161);
+/* harmony import */ var _detect_app_version_js__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(2229);
+
+
 
 
 
@@ -67861,7 +67865,7 @@ __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependen
 
 try {
   // Download and extract the project from S3
-  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__.S3Client({
+  const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__.S3Client({
     credentials: {
       accessKeyId: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-access-key-id") || undefined,
       secretAccessKey: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-secret-access-key") || undefined,
@@ -67871,7 +67875,7 @@ try {
     forcePathStyle: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getBooleanInput)("s3-force-path-style") || false,
   });
   const s3Response = await s3Client.send(
-    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_5__.GetObjectCommand({
+    new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_7__.GetObjectCommand({
       Bucket: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-bucket", { required: true }),
       Key: (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput)("s3-key", { required: true }),
     }),
@@ -67879,7 +67883,11 @@ try {
   const workspacePath = process.env.GITHUB_WORKSPACE;
   await (0,node_stream_promises__WEBPACK_IMPORTED_MODULE_0__.pipeline)(s3Response.Body, (0,unzipper__WEBPACK_IMPORTED_MODULE_2__.Extract)({ path: workspacePath }));
 
-  // Detect Node.js version and package manager after extraction
+  // Update Tauri config if present
+  await (0,_update_tauri_config_js__WEBPACK_IMPORTED_MODULE_5__/* .updateTauriConfig */ .X)(workspacePath);
+
+  // Detect Node.js version, package manager, and app version after extraction
+  const appVersion = await (0,_detect_app_version_js__WEBPACK_IMPORTED_MODULE_6__/* .detectAppVersion */ .N)(workspacePath);
   const nodeVersion = await (0,_detect_node_version_js__WEBPACK_IMPORTED_MODULE_4__/* .detectNodeVersion */ .W)(workspacePath);
   const packageManager = await (0,_detect_package_manager_js__WEBPACK_IMPORTED_MODULE_3__/* .detectPackageManager */ .L)(workspacePath);
 
@@ -67895,6 +67903,7 @@ try {
     : null;
 
   // Set outputs
+  (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("app-version", appVersion || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("node-version", nodeVersion || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)("package-manager", packageManager.name || "");
   (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.setOutput)(
@@ -67921,6 +67930,137 @@ try {
 
 __webpack_async_result__();
 } catch(e) { __webpack_async_result__(e); } }, 1);
+
+/***/ }),
+
+/***/ 7161:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   X: () => (/* binding */ updateTauriConfig)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6760);
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1635);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1244);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(6432);
+
+
+
+
+
+const BUNDLE_CONFIG = {
+  active: true,
+  createUpdaterArtifacts: true,
+  targets: ["app", "dmg", "nsis"],
+  windows: {
+    signCommand:
+      "trusted-signing-cli -e https://eus.codesigning.azure.net -a phuctm97 -c phuctm97 %1",
+  },
+};
+
+async function updateTauriConfig(workspacePath) {
+  const configPath = (0,node_path__WEBPACK_IMPORTED_MODULE_0__.join)(workspacePath, _constants_js__WEBPACK_IMPORTED_MODULE_3__/* .TAURI_CONFIG_PATH */ .D);
+  const configJson = await (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__/* .readJsonFile */ .JE)(configPath);
+  if (!configJson) {
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.info)(
+      "No valid src-tauri/tauri.conf.json found, skipping Tauri config update",
+    );
+    return;
+  }
+  try {
+    configJson.bundle = {
+      ...configJson.bundle,
+      ...BUNDLE_CONFIG,
+      windows: {
+        ...configJson.bundle?.windows,
+        ...BUNDLE_CONFIG.windows,
+      },
+    };
+    await (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__/* .writeJsonFile */ .An)(configPath, configJson);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.info)("Updated src-tauri/tauri.conf.json with bundle configuration");
+  } catch (error) {
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_1__.warning)(`Failed to update Tauri config: ${error.message}`);
+  }
+}
+
+
+/***/ }),
+
+/***/ 6432:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   An: () => (/* binding */ writeJsonFile),
+/* harmony export */   Gu: () => (/* binding */ readTextFile),
+/* harmony export */   JE: () => (/* binding */ readJsonFile),
+/* harmony export */   hR: () => (/* binding */ fileExists),
+/* harmony export */   jJ: () => (/* binding */ readPackageJson)
+/* harmony export */ });
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1455);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+
+
+
+/**
+ * Checks if a file exists
+ * @param {string} filePath
+ * @returns {Promise<boolean>}
+ */
+async function fileExists(filePath) {
+  try {
+    await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.access)(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads a text file, returns null on error
+ * @param {string} filePath
+ * @returns {Promise<string | null>}
+ */
+async function readTextFile(filePath) {
+  try {
+    return await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(filePath, "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads and parses a JSON file
+ * @param {string} filePath
+ * @returns {Promise<object | null>}
+ */
+async function readJsonFile(filePath) {
+  try {
+    const content = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes an object as JSON to a file
+ * @param {string} filePath
+ * @param {object} data
+ * @returns {Promise<void>}
+ */
+async function writeJsonFile(filePath, data) {
+  await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.writeFile)(filePath, JSON.stringify(data, null, 2) + "\n");
+}
+
+/**
+ * Reads and parses package.json from a project path
+ * @param {string} projectPath
+ * @returns {Promise<object | null>}
+ */
+async function readPackageJson(projectPath) {
+  return readJsonFile((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(projectPath, "package.json"));
+}
+
 
 /***/ }),
 

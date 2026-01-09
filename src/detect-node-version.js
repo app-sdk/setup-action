@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { readTextFile, readPackageJson } from "./utils.js";
 
 /**
  * Reads a simple version file (.nvmrc, .node-version)
@@ -8,28 +8,21 @@ import { join } from "node:path";
  * @returns {Promise<string | null>}
  */
 async function readVersionFile(filePath) {
-  try {
-    const content = await readFile(filePath, "utf-8");
-    const trimmed = content.trim();
+  const content = await readTextFile(filePath);
+  if (!content) return null;
 
-    // Return null if file is empty or only whitespace
-    if (!trimmed) {
-      return null;
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+
+  // Handle comments (lines starting with #)
+  for (const line of trimmed.split("\n")) {
+    const stripped = line.trim();
+    if (stripped && !stripped.startsWith("#")) {
+      return stripped;
     }
-
-    // Handle comments (lines starting with #)
-    const lines = trimmed.split("\n");
-    for (const line of lines) {
-      const stripped = line.trim();
-      if (stripped && !stripped.startsWith("#")) {
-        return stripped;
-      }
-    }
-
-    return null;
-  } catch {
-    return null;
   }
+
+  return null;
 }
 
 /**
@@ -39,47 +32,23 @@ async function readVersionFile(filePath) {
  * @returns {Promise<string | null>}
  */
 async function readToolVersions(projectPath) {
-  try {
-    const content = await readFile(
-      join(projectPath, ".tool-versions"),
-      "utf-8",
-    );
+  const content = await readTextFile(join(projectPath, ".tool-versions"));
+  if (!content) return null;
 
-    const lines = content.split("\n");
-    for (const line of lines) {
-      const trimmed = line.trim();
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
 
-      // Skip empty lines and comments
-      if (!trimmed || trimmed.startsWith("#")) {
-        continue;
-      }
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
-      // Parse "tool version [version2 ...]" format
-      const parts = trimmed.split(/\s+/);
-      if (parts[0] === "nodejs" && parts[1]) {
-        // Return the first (primary) version
-        return parts[1];
-      }
+    // Parse "tool version [version2 ...]" format
+    const parts = trimmed.split(/\s+/);
+    if (parts[0] === "nodejs" && parts[1]) {
+      return parts[1];
     }
-
-    return null;
-  } catch {
-    return null;
   }
-}
 
-/**
- * Reads and parses package.json
- * @param {string} projectPath
- * @returns {Promise<object | null>}
- */
-async function readPackageJson(projectPath) {
-  try {
-    const content = await readFile(join(projectPath, "package.json"), "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 /**

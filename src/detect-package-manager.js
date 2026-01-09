@@ -1,5 +1,5 @@
-import { readFile, access } from "node:fs/promises";
 import { join } from "node:path";
+import { fileExists, readPackageJson } from "./utils.js";
 
 const LOCK_FILES = {
   "pnpm-lock.yaml": "pnpm",
@@ -34,20 +34,6 @@ function parsePackageManagerField(value) {
 }
 
 /**
- * Reads and parses package.json
- * @param {string} projectPath
- * @returns {Promise<object | null>}
- */
-async function readPackageJson(projectPath) {
-  try {
-    const content = await readFile(join(projectPath, "package.json"), "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Gets package manager version from packageManager field if names match
  * @param {string} projectPath
  * @param {string} pmName
@@ -72,13 +58,9 @@ async function getPackageManagerVersion(projectPath, pmName) {
 export async function detectPackageManager(projectPath) {
   // Strategy 1: Check lock files (highest priority)
   for (const [lockFile, pmName] of Object.entries(LOCK_FILES)) {
-    try {
-      await access(join(projectPath, lockFile));
-      // Lock file exists - use this package manager
+    if (await fileExists(join(projectPath, lockFile))) {
       const version = await getPackageManagerVersion(projectPath, pmName);
       return { name: pmName, version };
-    } catch {
-      // Lock file doesn't exist, continue
     }
   }
 
